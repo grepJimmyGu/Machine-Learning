@@ -1,0 +1,294 @@
+\documentclass{article}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{amssymb}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+\begin{document}
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+opts_chunk$set(fig.path='figure/minimal-', fig.show='asis')
+options(replace.assign=TRUE,width=90)
+@
+
+\title{Stat 154 Problem Set Four}
+
+
+\author{Jinze Gu SID:24968967}
+
+
+\maketitle
+\section*{Problem One}
+\subsection*{(1)}
+In terms of data cleaning: I used the record that have exactly 1342 dates(without the abnormal date with hurricane) of records, so my total number of company is 422. Since there are NA values on the list of company with more than 1342 records, so I did not use them.\\
+SP500 index is calculated by the price of companies that are decided by the committee of StandardPoor using a linear relationship. However, the actual coefficients(weights) of different stocks remain undecided. Under the background knowledge, we can replicate the SP500 index by regressing on the price of those companies. Since we want to build a sparse portfolio, we can use lasso to construct our sparse portfolio. In order to evaluate the quality of my model, firstly, I tested if I should use elastic model or pure lasso by using different alpha(0 < alpha <= 1) to conduct regression. It turns out that the model is better when alpha is around 0.7. So I chose alpha to be 0.7.Then, I did cross validation and pick out the best lambda with samllest MSE; then I use that lambda to construct sparse portfolio. It turns out that my prediction of SP 500 index is very close to the actual value, which is verified by figure "Best Lambda Fit" where the lines(my prediction) matches perfectly with points(the actual value of SP500 index). As the result, we constructed a sparse portfolio where we use only the price of 58 companies to predict the SP500 index.
+
+\subsection*{(2)}
+In this case, I divided the time range of stock into intervals where each one contains 60 days of record(The last one has only 22), then I constructed a function that figures out the sparse portfolio by lasso, guarantees the quality of model by crossvalidation and returns the names as well as corresponding coefficients of companies in the portfolio. It turns out that our portfolio is not stable enough, for example, the number of companies included in the portfolio varies with time, which is illustrated in the figure with name "Number of Companies in Portfolio SP500 Index". Even if for the same company, we have different weights(coefficients) over time, which may increase the cost transaction when we actually put the model into application. As an example, please check plot "CME weights in replicating SP500 index", which indicates the change of coefficients of "C M E Group INC" in replicating SP500 index\\
+In order to get a portfolio that changes little overtime, we can add penalty of $|\beta_t - \beta_s|$ for each coefficient over time. It indicates that we penalize the model with unstable coefficients. I believe it would help us to figure out the portfolio that changes little over time.
+
+\subsection*{(3)}
+In this case, we can modify the penalty of lasso for a little bit. Since we don't want to have negative values, then we change the penalty of negative $\beta$ to be infinity while leaving the penalty of positive $\beta$ unchanged. The optimization problem (minimizing argmin${squared error + lasso penalty}$), if convex, would easily come up with the result with only positive $\beta$s. 
+
+\subsection*{(4)}
+Since the relationship between SP500 return and the price of every stock is no longer linear, then I expect that we may need to expand the number of stocks included in the portfolio in order to have a better prediction. \\
+\subsubsection*{First Part}
+It turns out we do need a larger portfolio, specifically, I need a large portion of companies in my portfolio in order to track SP500 returns while I only need 58 companies to track the SP500 index.\\
+\subsubsection*{Stability}
+In terms of the stability of sparse model of tracking SP500 returns every 60 day, our result is not stable although we do require more companies compared with tracking the index. By the plot "Number of Compnaies in Portfolio SP500 Return",we still have a fluctuating sparse portfolio. Possibly we need to change the penalty in order to really fix the problem. 
+
+\subsection*{(5)}
+Since we do not need to concern about transaction problems, we can use the price of all the companies on our list to predict SP500 index using linear regression. I divided my dataset into training and test dataset. It turns out the prediction is really good where the squared error is about 274.9754(which is the minimum compared with lasso, ridge and elastic net). Using the same training and testing dataset, I tried lasso, ridge regression and elasticnet model, but it turns out linear regression has the smallest test error. Thus, regardless of transaction cost, we can replicate SP500 index by linear regression.
+
+\section*{Problem Two}
+On the hand written page attached.
+
+\section*{Problem Three}
+For this problem, I used LDA, QDA, logistic model and logistic with lasso to analyze the data. I notice that the model could be better(we do not need all of the predictors to do classification) if we use stepwise or stagewise selection to select predictors carefully. However, we are comparing the quality of classification method, as long as we use the same model to all of the method, we can have a relative comparison. In order to compare the quality of classifiers, I used two ways:\\
+1). split the data into training set and test set and calculate the traning error and test error for every method. Compare training and test error.\\
+2). figure out the false positive and false negative index among different classifiers.\\
+In conclusion:\\
+In terms of training error and test error(check plot "Training and Test Error"), it seems that LDA outweighs the other three methods and Logisticlasso also have a good prediction behaviour. However, Logisticlasso have the best false positive error(check the plot "False Positive False Negative") while QDA has the best false negative error. Back to the practical situation of diagnosing cancer, the cost of diagnosing a noncancer patient as having cancer may be larger than diagnosing a cancer patient as not having cancer. Thus, if we want to elminate false positive error, we are better off with logistic lasso model. If we want to eliminate the total prediction error, we probably want to use LDA.
+
+\section*{Appendix: Code for Problem One}
+
+<<Stock>>=
+setwd("/Volumes/有能出没/Stat 154/HW_4")
+sp500 <- read.csv("500sp.csv")
+Index <- read.csv("track.csv")
+# I used the percentage of return times 100 so that I don't have very small values
+SPReturn <- (Index[672:2013,2]/Index[671:2012,2] - 1)*100
+Index <- Index[672:2013,]
+head(levels(factor(Index$Calendar.Date)))
+sp500$PRC <- abs(sp500$PRC)
+sp500$date <- as.factor(sp500$date)
+Compname <- as.matrix(levels(factor(sp500$COMNAM)))
+# Notice that one date has an abscure record
+head(tabulate(sp500$date))
+levels(sp500$date)[1301] # The date without common record. 
+# We want to know if the SP500 index contains this date, and we need to kick it out
+sp500$PRC[which(sp500$date == "20121029")]
+sp500 <- sp500[-which(sp500$date == "20121029")]
+tabulate(sp500$TICKER)
+
+# The date with SP500 index recorded
+date_index <- levels(factor(Index$Calendar.Date))
+price <- matrix(NA, nrow = length(date_index), ncol = length(Compname))
+
+# I will select the company that have exactly 1342 dates of record.
+f <- function(compname){
+  if(length(sp500$PRC[sp500$COMNAM == compname]) == 1342){
+    return(sp500$PRC[which(sp500$COMNAM==compname)][1:1342]) 
+  }
+}
+
+price <- matrix(unlist(sapply(Compname, f)), nrow = 1342)
+sum(price <= 0) # Make sure there are not weired price_value
+names = levels(sp500$COMNAM)[which(tabulate(sp500$COMNAM) == 1342)]
+colnames(price) <- names
+
+# Now we want to check if the date of stock price match the date on which there are records of SP500 value, it turns out they match.
+sum(levels(factor(sp500$date))[-1301] != date_index)
+
+# 1)
+spindex <- as.matrix(Index$SP.500.Level)
+library(glmnet)
+test_alpha <- function(a, y){
+  glmnet_fit<-glmnet(price, y, family = c("gaussian"), standardize = FALSE, nlambda = 100, alpha = a)
+  cv_glmnet<-cv.glmnet(price, y, family = "gaussian", alpha = a, nfolds = 10)
+  predict_glmnet<-predict(glmnet_fit, newx = price, s = cv_glmnet$lambda.min, type = "link")
+  return(sum((predict_glmnet-y)^2)/length(y))
+}
+alpha <- seq(0.1,1, by = 0.1)
+alpha_test_error <- matrix(NA, length(alpha))
+for(i in alpha){
+  alpha_test_error[i*10,] <- test_alpha(i, spindex)
+}
+plot(x = alpha, y = alpha_test_error, main = "Error Over Different Alpha", type = "b", xlab = "alpha", ylab = "Error")
+abline(v = alpha[which.min(alpha_test_error)], lty = 2)
+
+# So I chose alpha to be 0.7 in order to minimize the error.
+glmnet_fit <- glmnet(price, spindex, family = "gaussian", standardize = FALSE, nlambda = 100, alpha = 0.7)
+plot(glmnet_fit, xvar="lambda")
+cv_glmnet <- cv.glmnet(price, spindex, type.measure="mse", family = "gaussian", alpha = 0.7, nfolds = 10)
+plot(cv_glmnet)
+predict_glmnet <- predict(glmnet_fit, newx = price, s = cv_glmnet$lambda.min, type = "link")
+# We need to calculate the coefficient of lasso
+coef_glmnet <- predict(glmnet_fit, newx = price, s = cv_glmnet$lambda.min, type = "coefficients")
+plot(spindex, type = "p", cex = 0.3 ,main = "Best Lambda Fit")
+lines(predict_glmnet, col = "red")
+# The name of the company in our sparse portfolio
+names[which(coef_glmnet != 0)[-1]-1]
+
+#2)
+group <- seq(0, 1342, by = 60)
+portfolio <- function(n, folds){
+   X <- price[max(1,group[n]):group[n+1],]; Y <- spindex[max(1,group[n]):group[n+1]]
+   glmnet.fit <- glmnet(X, Y, family = c("gaussian"), standardize = FALSE, nlambda = 100, alpha = 0.7)
+   glmnet.cv <- cv.glmnet(X, Y, family = "gaussian", alpha = 0.7, nfolds = folds)
+   lambda <- glmnet.cv$lambda.min
+   glmnet.coef <- coef(glmnet.fit, s = lambda)
+   coefficient <- glmnet.coef[which(glmnet.coef!=0)]
+   prediction <- predict(glmnet_fit, newx = X, s = lambda, type = "link")
+   return(list("lambda" = lambda, "prediction" = as.numeric(prediction), "coefficient" = coefficient, "compname" = names[which(glmnet.coef != 0)[-1]-1]))
+}
+# Sample Output
+portfolio(1,10)$compname # Company List in the first 60 days.
+portfolio(2,10)$compname # Company List in the second 60 days.
+portfolio(3,10)$compname # Company List in the third 60 days.
+portfolio(4,10)$compname # Company List in the fourth 60 days.
+portfolio(5,10)$compname # Company List in the fifth 60 days.
+portfolio(10,10)$compname # Company List in the tenth 60 days.
+portfolio(15,10)$compname # Company List in the fiftith 60 days.
+CME <- matrix(0, 22)
+for(i in 1:22){
+    if(sum(portfolio(i, 10)$compname == "C M E GROUP INC")!=0){
+      j <- which(portfolio(i, 10)$compname == "C M E GROUP INC")
+      CME[i] <-portfolio(i,10)$coefficient[(j+1)]
+  }
+}
+plot(CME, main = "CME weights in replicating S&P500 index", type = "b", xlab ="Different portfolios")
+# I need to figure out the stability of company list.
+number_comp <- matrix(NA, 22)
+name_comp <- matrix(NA, 22, 17)
+for(i in 1:22){
+  number_comp[i,] <- length(portfolio(i, 10)$compname)
+}
+plot(number_comp, main = "Number of Companies in Portfolio & SP500 Index", type = "b", xlab = "Portfolios Every 60 Days")
+
+# 4).
+Return.lasso <- glmnet(price, SPReturn, family = "gaussian", standardize = FALSE, alpha = 1)
+Return.cv <- cv.glmnet(price, as.matrix(SPReturn), family = "gaussian", alpha = 1)
+plot(Return.cv, main = "Cross Validation For Sparse Porfolio of Returns")
+Return.coef <- coef(Return.lasso, s = Return.cv$lambda.min, alpha = 1)
+length(which(Return.coef != 0))-1 # The number of coefficients minus one intercept
+
+portfolio_return <- function(n, folds){
+   X <- price[max(1,group[n]):group[n+1],]; Y <- SPReturn[max(1,group[n]):group[n+1]]
+   glmnet.fit <- glmnet(X, Y, family = c("gaussian"), standardize = FALSE, nlambda = 100, alpha = 0.7)
+   glmnet.cv <- cv.glmnet(X, Y, family = "gaussian", alpha = 0.7, nfolds = folds)
+   lambda <- glmnet.cv$lambda.min
+   glmnet.coef <- coef(glmnet.fit, s = lambda)
+   coefficient <- glmnet.coef[which(glmnet.coef!=0)]
+   prediction <- predict(glmnet_fit, newx = X, s = lambda, type = "link")
+   return(list("lambda" = lambda, "prediction" = as.numeric(prediction), "coefficient" = coefficient, "compname" = names[which(glmnet.coef != 0)[-1]-1]))
+}
+
+portfolio_return(1, 10)$compname
+portfolio_return(2, 10)$compname
+portfolio_return(5, 10)$compname
+portfolio_return(10, 10)$compname
+portfolio_return(15, 10)$compname
+portfolio_return(20, 10)$compname
+number_comp_return <- matrix(NA, 22)
+for(i in 1:22){
+  number_comp_return[i,] <- length(portfolio_return(i, 10)$compname)
+}
+plot(number_comp_return, main = "Number of Companies in Portfolio & SP500 Return", type = "b", xlab = "Portfolios Every 60 Days")
+
+# 5).
+sp500_lm <- lm(spindex[1:800] ~ price[1:800,])
+prediction <- predict(sp500_lm, interval = "none", type = "response")
+sum((prediction - spindex[1:800])^2)/800
+lm.test <- cbind(rep(1,542), price[801:1342,])%*%sp500_lm$coefficients
+sum((lm.test - spindex[801:1342])^2)/542
+
+sp500_ridge <- glmnet(price[1:800,], spindex[1:800], standardize = FALSE, family = "gaussian", alpha = 1)
+ridge.cv <- cv.glmnet(price[1:800,], spindex[1:800],family = "gaussian", type.measure="mse", alpha = 1)
+ridge.fit <- predict(ridge.cv, price[801:1342,], s = ridge.cv$lambda.min, type = "link")
+sum((ridge.fit-spindex[801:1342])^2)/542
+@
+
+\section*{Appendix: Code for Problem Three}
+<<SouthAfrica>>=
+setwd("/Volumes/有能出没/Stat 154/HW_4")
+SA <- read.csv("SouthAfrica.csv", header = TRUE)
+Response <- SA[,11]
+Response_train <- Response[1:300]
+Response_test <- Response[301:length(Response)]
+X <- SA[,c(2,3,4,5,7,8,9,10)]
+X_train <- X[1:300,]
+X_test <- X[301:length(Response),]
+Train.error <- matrix(NA, 4)
+Test.error <- matrix(NA, 4)
+# I wrote a function to detect the false positive and false negative rate.
+fpfn <- function(predict, original){
+  fp <- sum(original[which(predict == 1)]!=1)
+  fn <- sum(original[which(predict == 0)]!=0)
+  return(c("False Positive" = fp, "False Negative" = fn))
+}
+
+# LDA and variants LDA classifier
+library(MASS)
+LDA <- lda(X_train, grouping = as.factor(Response_train))
+LDA_train <- predict(LDA, X_train)$class
+# Train error of LDA
+Train.error[1,] <- sum(as.factor(Response_train)!=LDA_train)/length(Response_train)
+sum(as.factor(Response_train)!=LDA_train)/length(Response_train)
+# Test error of LDA:
+LDA_test <- predict(LDA, X_test)$class
+Test.error[1,] <- sum(as.factor(Response_test)!=LDA_test)/length(Response_test)
+sum(as.factor(Response_test)!=LDA_test)/length(Response_test)
+fpfn(LDA_test, Response_test)
+
+# QDA classifier
+QDA <- qda(X_train, grouping = as.factor(Response_train))
+QDA_train <- predict(QDA, X_train)$class
+# Train error of RDA
+Train.error[2,] <- sum(as.factor(Response_train)!=QDA_train)/length(Response_train)
+sum(as.factor(Response_train)!=QDA_train)/length(Response_train)
+# Test error of LDA:
+QDA_test <- predict(QDA, X_test)$class
+Test.error[2,] <- sum(as.factor(Response_test)!=QDA_test)/length(Response_test)
+sum(as.factor(Response_test)!=QDA_test)/length(Response_test)
+fpfn(QDA_test, Response_test)
+
+# Logistic Regression.
+logistic <- glm(Response_train ~ as.matrix(X_train) + 0, family = "binomial")
+logistic_train <- predict(logistic, type = "response")
+logistic_train[logistic_train >= 0.5] <-1
+logistic_train[logistic_train < 0.5] <-0
+Train.error[3,] <- sum(Response_train!=logistic_train)/300
+sum(Response_train!=logistic_train)/300
+logistic_test <- as.matrix(X_test)%*%logistic$coefficients
+logistic_test[which(logistic_test < 0)] <- 0
+logistic_test[which(logistic_test > 0)] <- 1
+Test.error[3,] <- sum(Response_test!=logistic_test)/length(Response_test)
+fpfn(logistic_test, Response_test)
+
+# Logistic Lasso 
+library(glmnet)
+lasso <- glmnet(as.matrix(X_train), Response_train, family = "binomial", alpha = 1)
+cv.lasso <- cv.glmnet(as.matrix(X_train), Response_train, family = "binomial", type.measure = "mse")
+plot(cv.lasso)
+lasso_train <- predict(lasso, as.matrix(X_train), s = cv.lasso$lambda.min, type = "class")
+Train.error[4,] <- sum(as.factor(lasso_train)!= as.factor(Response_train))/length(Response_train)
+sum(as.factor(lasso_train)!= as.factor(Response_train))/length(Response_train)
+lasso_test <- predict(lasso, as.matrix(X_test), s = cv.lasso$lambda.min, type = "class")
+Test.error[4,] <- sum(as.factor(lasso_test)!= as.factor(Response_test))/length(Response_test)
+sum(as.factor(lasso_test)!= as.factor(Response_test))/length(Response_test)
+# Detect false positive and false negative
+fpfn(lasso_test, Response_test)
+row.names(Train.error) <- c("LDA", "QDA", "Logit", "Logit with Lasso")
+with(plot(Train.error, type = "b", main = "Training and Test Error", ylim = c(0.2,0.33)), text(x = Train.error, labels = c("LDA", "QDA", "Logit", "Lasso"), pos = 3))
+lines(Test.error, lty = 2)
+legend("bottomright", c("Train Error", "Test Error"), lty = c(1,2))
+
+FPFN <- rbind(fpfn(LDA_test, Response_test),fpfn(QDA_test, Response_test),fpfn(logistic_test, Response_test),fpfn(lasso_test, Response_test))
+row.names(FPFN) <- c("LDA", "QDA", "Logit", "Logit with Lasso")
+with(plot(FPFN, main = "False Positive & False Negative", ylim = c(15, 40), xlim = c(5, 35)), text(x = FPFN[,1], y = FPFN[,2], labels = c("LDA", "QDA", "Logit", "Logit with Lasso"), pos = 3))
+
+@
+
+\end{document}

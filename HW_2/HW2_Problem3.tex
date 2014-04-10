@@ -1,0 +1,199 @@
+\documentclass{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+
+\section*{Problem 3}
+
+According to my simulation, it seems that dimensionality benefits knn method if we compare the best fit using knn(from the perspective of EPE) and linear fit for the data. Since the model is very specific, it is hard to draw a general conclusion on the behaviour of knn prediction under high dimensional case. However, I feel knn can be more accurate than linear model in prediction as we increase dimension.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(FNN)}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'FNN' was built under R version 3.0.2}}\begin{alltt}
+\hlkwd{set.seed}\hlstd{(}\hlnum{14250}\hlstd{)}
+\hlstd{X} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{runif}\hlstd{(}\hlnum{250}\hlstd{,} \hlkwc{min} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{=} \hlnum{2} \hlopt{*} \hlstd{pi),} \hlkwc{nrow} \hlstd{=} \hlnum{50}\hlstd{)}
+\hlstd{f0_x} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+    \hlstd{sin} \hlkwb{<-} \hlkwd{sin}\hlstd{(x[}\hlnum{1}\hlstd{])} \hlopt{+} \hlkwd{sin}\hlstd{(}\hlkwd{sqrt}\hlstd{(}\hlnum{2}\hlstd{)} \hlopt{*} \hlstd{x[}\hlnum{2}\hlstd{])} \hlopt{+} \hlkwd{sin}\hlstd{(}\hlkwd{sqrt}\hlstd{(}\hlnum{3}\hlstd{)} \hlopt{*} \hlstd{x[}\hlnum{3}\hlstd{])} \hlopt{+}
+        \hlkwd{sin}\hlstd{(}\hlkwd{sqrt}\hlstd{(}\hlnum{4}\hlstd{)} \hlopt{*} \hlstd{x[}\hlnum{4}\hlstd{])} \hlopt{+} \hlkwd{sin}\hlstd{(}\hlkwd{sqrt}\hlstd{(}\hlnum{5}\hlstd{)} \hlopt{*} \hlstd{x[}\hlnum{5}\hlstd{])}
+    \hlstd{cos} \hlkwb{<-} \hlkwd{sum}\hlstd{(}\hlkwd{cos}\hlstd{(x[}\hlnum{1}\hlopt{:}\hlnum{4}\hlstd{]} \hlopt{*} \hlstd{x[}\hlnum{2}\hlopt{:}\hlnum{5}\hlstd{]))}
+    \hlstd{y} \hlkwb{<-} \hlstd{sin} \hlopt{+} \hlstd{cos}
+    \hlkwd{return}\hlstd{(y)}
+\hlstd{\}}
+\hlstd{Y} \hlkwb{<-} \hlkwd{apply}\hlstd{(X,} \hlnum{1}\hlstd{, f0_x)} \hlopt{+} \hlkwd{rnorm}\hlstd{(}\hlnum{50}\hlstd{)}  \hlcom{# I suppose this is the case although the homework sheet is different.}
+\hlcom{# Suppose I use one point Xo}
+\hlstd{Xo} \hlkwb{<-} \hlkwd{runif}\hlstd{(}\hlnum{5}\hlstd{,} \hlkwc{min} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{=} \hlnum{2} \hlopt{*} \hlstd{pi)}
+\hlcom{# Simulate one thousand time of Yo of Xo}
+\hlstd{Yo} \hlkwb{<-} \hlkwd{f0_x}\hlstd{(Xo)} \hlopt{*} \hlkwd{rep}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{1000}\hlstd{)} \hlopt{+} \hlkwd{rnorm}\hlstd{(}\hlnum{1000}\hlstd{)}
+\hlcom{# Prediction of knn using different k values.}
+\hlstd{Yo_knnfive} \hlkwb{<-} \hlkwd{knn.reg}\hlstd{(}\hlkwc{train} \hlstd{= X,} \hlkwc{test} \hlstd{= Xo,} \hlkwc{y} \hlstd{= Y,} \hlkwc{k} \hlstd{=} \hlnum{5}\hlstd{)}
+\hlstd{EPE_5} \hlkwb{<-} \hlkwd{mean}\hlstd{((Yo_knnfive}\hlopt{$}\hlstd{pred} \hlopt{-} \hlstd{Yo)}\hlopt{^}\hlnum{2}\hlstd{)}
+\hlstd{EPE_5}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.9692
+\end{verbatim}
+\begin{alltt}
+\hlstd{Yo_knn10} \hlkwb{<-} \hlkwd{knn.reg}\hlstd{(}\hlkwc{train} \hlstd{= X,} \hlkwc{test} \hlstd{= Xo,} \hlkwc{y} \hlstd{= Y,} \hlkwc{k} \hlstd{=} \hlnum{10}\hlstd{)}
+\hlstd{EPE_10} \hlkwb{<-} \hlkwd{mean}\hlstd{((Yo_knn10}\hlopt{$}\hlstd{pred} \hlopt{-} \hlstd{Yo)}\hlopt{^}\hlnum{2}\hlstd{)}
+\hlstd{EPE_10}
+\end{alltt}
+\begin{verbatim}
+## [1] 1.113
+\end{verbatim}
+\begin{alltt}
+\hlstd{Yo_knn20} \hlkwb{<-} \hlkwd{knn.reg}\hlstd{(}\hlkwc{train} \hlstd{= X,} \hlkwc{test} \hlstd{= Xo,} \hlkwc{y} \hlstd{= Y,} \hlkwc{k} \hlstd{=} \hlnum{20}\hlstd{)}
+\hlstd{EPE_20} \hlkwb{<-} \hlkwd{mean}\hlstd{((Yo_knn20}\hlopt{$}\hlstd{pred} \hlopt{-} \hlstd{Yo)}\hlopt{^}\hlnum{2}\hlstd{)}
+\hlstd{EPE_20}
+\end{alltt}
+\begin{verbatim}
+## [1] 2.041
+\end{verbatim}
+\begin{alltt}
+\hlstd{Yo_knn30} \hlkwb{<-} \hlkwd{knn.reg}\hlstd{(}\hlkwc{train} \hlstd{= X,} \hlkwc{test} \hlstd{= Xo,} \hlkwc{y} \hlstd{= Y,} \hlkwc{k} \hlstd{=} \hlnum{30}\hlstd{)}
+\hlstd{EPE_30} \hlkwb{<-} \hlkwd{mean}\hlstd{((Yo_knn30}\hlopt{$}\hlstd{pred} \hlopt{-} \hlstd{Yo)}\hlopt{^}\hlnum{2}\hlstd{)}
+\hlstd{EPE_30}
+\end{alltt}
+\begin{verbatim}
+## [1] 2.519
+\end{verbatim}
+\begin{alltt}
+\hlcom{# Linear Prediction}
+\hlstd{lfit} \hlkwb{<-} \hlkwd{lm}\hlstd{(Y} \hlopt{~} \hlstd{X)}
+\hlstd{Y_hat} \hlkwb{<-} \hlstd{Xo} \hlopt{%*%} \hlstd{lfit}\hlopt{$}\hlstd{coefficients[}\hlnum{2}\hlopt{:}\hlnum{6}\hlstd{]} \hlopt{+} \hlstd{lfit}\hlopt{$}\hlstd{coefficients[}\hlnum{1}\hlstd{]}
+\hlstd{EPE_linear} \hlkwb{<-} \hlkwd{mean}\hlstd{((Y_hat} \hlopt{-} \hlstd{Yo)}\hlopt{^}\hlnum{2}\hlstd{)}
+\hlstd{EPE_linear}
+\end{alltt}
+\begin{verbatim}
+## [1] 1.042
+\end{verbatim}
+\begin{alltt}
+\hlcom{# Now I need to get E(EPE(x)), and it is estimated by}
+\hlcom{# simulation}
+\hlstd{Expected_EPE} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{method}\hlstd{,} \hlkwc{X}\hlstd{,} \hlkwc{Y}\hlstd{,} \hlkwc{k_value} \hlstd{=} \hlkwa{NULL}\hlstd{) \{}
+    \hlstd{X_new} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{runif}\hlstd{(}\hlnum{10000}\hlstd{,} \hlkwc{min} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{max} \hlstd{=} \hlnum{2} \hlopt{*} \hlstd{pi),} \hlkwc{nrow} \hlstd{=} \hlnum{2000}\hlstd{)}
+    \hlstd{Y_new} \hlkwb{<-} \hlkwd{apply}\hlstd{(X,} \hlnum{1}\hlstd{, f0_x)} \hlopt{+} \hlkwd{rnorm}\hlstd{(}\hlnum{2000}\hlstd{)}
+    \hlkwa{if} \hlstd{(method} \hlopt{==} \hlnum{1}\hlstd{) \{}
+        \hlstd{fit} \hlkwb{<-} \hlkwd{knn.reg}\hlstd{(}\hlkwc{train} \hlstd{= X,} \hlkwc{test} \hlstd{= X_new,} \hlkwc{y} \hlstd{= Y,} \hlkwc{k} \hlstd{= k_value)}
+        \hlstd{Mean_EPE} \hlkwb{<-} \hlkwd{mean}\hlstd{((fit}\hlopt{$}\hlstd{pred} \hlopt{-} \hlstd{Y_new)}\hlopt{^}\hlnum{2}\hlstd{)}\hlopt{/}\hlstd{(}\hlnum{2} \hlopt{*} \hlstd{pi)}
+    \hlstd{\}}
+    \hlkwa{if} \hlstd{(method} \hlopt{==} \hlnum{2}\hlstd{) \{}
+        \hlstd{fit} \hlkwb{<-} \hlkwd{lm}\hlstd{(Y} \hlopt{~} \hlstd{X)}
+        \hlstd{Y_hat} \hlkwb{<-} \hlstd{X_new} \hlopt{%*%} \hlstd{fit}\hlopt{$}\hlstd{coefficients[}\hlnum{2}\hlopt{:}\hlnum{6}\hlstd{]} \hlopt{+} \hlstd{fit}\hlopt{$}\hlstd{coefficients[}\hlnum{1}\hlstd{]}
+        \hlstd{Mean_EPE} \hlkwb{<-} \hlkwd{mean}\hlstd{((Y_hat} \hlopt{-} \hlstd{Y_new)}\hlopt{^}\hlnum{2}\hlstd{)}\hlopt{/}\hlstd{(}\hlnum{2} \hlopt{*} \hlstd{pi)}
+    \hlstd{\}}
+    \hlkwd{return}\hlstd{(Mean_EPE)}
+\hlstd{\}}
+\hlcom{# The E(EPE(X)) of knn with k = 1,5,10,20,30,40}
+\hlkwd{Expected_EPE}\hlstd{(}\hlkwc{method} \hlstd{=} \hlnum{1}\hlstd{, X, Y,} \hlkwc{k_value} \hlstd{=} \hlnum{1}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 1.96
+\end{verbatim}
+\begin{alltt}
+\hlkwd{Expected_EPE}\hlstd{(}\hlkwc{method} \hlstd{=} \hlnum{1}\hlstd{, X, Y,} \hlkwc{k_value} \hlstd{=} \hlnum{5}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 1.158
+\end{verbatim}
+\begin{alltt}
+\hlkwd{Expected_EPE}\hlstd{(}\hlkwc{method} \hlstd{=} \hlnum{1}\hlstd{, X, Y,} \hlkwc{k_value} \hlstd{=} \hlnum{10}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 1.051
+\end{verbatim}
+\begin{alltt}
+\hlkwd{Expected_EPE}\hlstd{(}\hlkwc{method} \hlstd{=} \hlnum{1}\hlstd{, X, Y,} \hlkwc{k_value} \hlstd{=} \hlnum{20}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.9898
+\end{verbatim}
+\begin{alltt}
+\hlkwd{Expected_EPE}\hlstd{(}\hlkwc{method} \hlstd{=} \hlnum{1}\hlstd{, X, Y,} \hlkwc{k_value} \hlstd{=} \hlnum{30}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.9692
+\end{verbatim}
+\begin{alltt}
+\hlkwd{Expected_EPE}\hlstd{(}\hlkwc{method} \hlstd{=} \hlnum{1}\hlstd{, X, Y,} \hlkwc{k_value} \hlstd{=} \hlnum{40}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.9627
+\end{verbatim}
+\begin{alltt}
+\hlcom{# The E(EPE(X)) of linear fit}
+\hlkwd{Expected_EPE}\hlstd{(}\hlkwc{method} \hlstd{=} \hlnum{2}\hlstd{, X, Y)}
+\end{alltt}
+\begin{verbatim}
+## [1] 1.091
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{document}

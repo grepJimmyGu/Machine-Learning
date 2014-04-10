@@ -1,0 +1,57 @@
+\documentclass{article}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+\begin{document}
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+opts_chunk$set(fig.path='figure/minimal-', fig.align='center', fig.show='asis')
+options(replace.assign=TRUE,width=72)
+@
+\section*{Problem 3}
+
+<<Problem 3, fig.height=5,fig.width=5.5, warning=FALSE>>=
+# We constructed a function called rgene to generate the of a circle with radius r
+set.seed(0)
+rgene <- function(r){
+  theta <- runif(150, min = -pi, max = pi)
+  x <- r*cos(theta) + rnorm(150, mean = 0, sd = 0.25)
+  y <- r*sin(theta) + rnorm(150, mean = 0, sd = 0.25)
+  return(cbind("x" = x, "y" = y))
+}
+X <- rgene(5); Y <- rgene(2.8); Z <- rgene(1);
+# Draw the plot of graph
+plot(X, main = "Simulated Data Points");points(Y, col="red");points(Z, col = "blue")
+# Spectral Clustering
+library(kernlab)
+s_data <- rbind(X,Y,Z)
+spec_cl <- specc(s_data, centers = 3)
+# It is a really accurate clustering
+plot(s_data, pch = spec_cl, main = "Spectral Clustered Points Denoted Using Different Symbols")
+
+# Kernel PCA
+s_kpc <- kpca(s_data, kernel = "rbfdot", list(sigma = 0.7))
+plot(rotated(s_kpc)[,1], rotated(s_kpc)[,2], main = "Rotated Data using Kernel PCA")
+# Comment: Using kernel PCA, we can see that there are three parts of points that can be grouped.
+
+# PCA
+s_pc <- prcomp(s_data, rtex = TRUE, scale = TRUE)
+plot(s_pc$x, main = "Rotated Data Using PCA")
+# Comment: Obviously, PCA cannot help us to cluster the data, which is reasonable since what we have done is only rotating the coordinates; however, it does not change anything since the data spread like circles.
+
+@
+\end{document}
+
+

@@ -1,0 +1,130 @@
+\documentclass{article}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+\begin{document}
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+opts_chunk$set(fig.path='figure/minimal-', fig.show='asis')
+options(replace.assign=TRUE,width=90)
+@
+
+\section*{Problem Two Repeat Again}
+This model has a better fit using knn and linear model, which is what we had expected since we don't have oscillating function here. We can easily interpret a trend of data so that the fit would be more accurate. It is demonstrated by our code below that a large portion of EPE comes from variance, from some perspective,  it reflects that we have pretty good fit for the data.
+
+<<Haha>>=
+set.seed(25041)
+par(mfcol = c(2,2))
+require(FNN)
+require(fields)
+X <- (c(1:100)-1/2)/100*2*pi
+Y <- X*0.2 + 0.1 + rnorm(100, sd = sqrt(0.1))
+# 1) # This is the k-nn funtion that returns the estimated value of some point using k nearest neighbors with Euclidean metric
+knn <- function(x, y, xseq, k){
+  if(k < length(x)){
+    dmat <- rdist(x, xseq) 
+    indices <- order(dmat)[2:(k+1)] # If you need to find less than 10 neighbors, it will not take the point itself as a neighbor
+    return(mean(y[indices]))
+  }
+  else{
+    dmat <- rdist(x, xseq) 
+    indices <- order(dmat)[1:k]
+    # If you need to find 10 neighbors, it will take the points itself as a neighbor
+    return(mean(y[indices]))
+  }  
+}
+
+# Plot knn function for k = 1,3,10
+knn_one <- sapply(X, knn, y = Y, xseq = X, k = 1)
+plot(X, Y, main = "k-nearest-neighbor k = 1 function 0.1 + 0.2*x", xlab = "N = 100")
+points(X, knn_one, pch = 4)
+legend("bottomright", c("original points", "fitted points"), pch = c(1,4))
+
+knn_thr <- sapply(X, knn, y = Y, xseq = X, k = 3)
+plot(X, Y, main = "k-nearest-neighbor k = 3 function 0.1 + 0.2*x", xlab = "N = 100")
+points(X, knn_thr, pch = 4)
+legend("bottomright", c("original points", "fitted points"), pch = c(1,4))
+
+knn_ten <- sapply(X, knn, y = Y, xseq = X, k = 10)
+plot(X, Y, main = "k-nearest-neighbor k = 10 function 0.1 + 0.2*x", xlab = "N = 100")
+points(X, knn_ten, pch = 4)
+legend("bottomright", c("original points", "fitted points"), pch = c(1,4))
+ 
+
+# EPE(pi) and E(EPE(X))
+# Same idea as before except that I doubled the size of simulation for E(EPE(X))
+
+set.seed(123123)
+Eps <- matrix(rep(rnorm(100, sd = sqrt(0.1)), 1000), ncol = 1000) # Firstly I generate random error
+X_pre <- (c(1:1000)-1/2)/1000*2*pi # The 500 randomly generated number from        UNIF(0, 2*pi)
+Simu_Y <- t(matrix(1, nrow = 1000, ncol = 100)*(0.2*X_pre + 0.1)) + Eps
+
+# The model I use is as follows
+knn_model <- function(data_X, X, Y, k){
+  fit <- sapply(data_X, knn, y = Y, xseq = X, k = k)
+  EPE <- matrix(NA, nrow = length(data_X), ncol = 3)
+  for(i in 1: length(data_X)){
+    EPE[i,1] <- mean((Simu_Y[,i] - fit[i])^2)
+    EPE[i,2] <- mean((Simu_Y[,i] - mean(Simu_Y[,i]))^2)
+    EPE[i,3] <- mean((fit[i] - mean(Simu_Y[,i]))^2)
+  }
+  # Since X's are draw from uniform distribution, so we can estimate the Expected EPE by taking the average of 500 different EPE
+  MeanEPE <- mean(EPE)/(2*pi)
+  var_ratio <- mean(EPE[,2]/EPE[,1])
+  bias_ratio <- mean(EPE[,3]/EPE[,1])
+  return(data.frame("Mean_EPE" = MeanEPE, "var_ratio" = var_ratio, "bias_ratio" = bias_ratio))
+}
+knn_model(X_pre, X, Y, 1)
+knn_model(X_pre, X, Y, 3)
+knn_model(X_pre, X, Y, 10)
+knn_model(X_pre, X, Y, 20)
+knn_model(X_pre, X, Y, 50)
+
+
+plot(rbind(knn_model(X_pre, X, Y, 1)$bias_ratio,knn_model(X_pre, X, Y, 3)$bias_ratio,knn_model(X_pre, X, Y, 10)$bias_ratio), type = "b", ylim = c(0,1), ylab = "", main = "Variance and Bias Ratio Behaviour")
+lines(rbind(knn_model(X_pre, X, Y, 1)$var_ratio,knn_model(X_pre, X, Y, 3)$var_ratio,knn_model(X_pre, X, Y, 10)$var_ratio), lty = 4)
+legend("topright", c("bias_ratio", "var_ratio"), lty = c(1,4))
+
+
+# Fit a constant function(The same as fitting a knn with k = 100 since we only have ten points in the trainning sample)
+knn_model(X_pre, X, Y, 100)
+
+# Fit a linear model
+
+fit_linear <- lm(Y ~ X)
+predict_linear <- X_pre*fit_linear$coefficients[2] + fit_linear$coefficients[1]
+EPE_linear <- matrix(NA, 1000)
+for(i in 1:1000){EPE_linear[i] <- mean((predict_linear[i]-Simu_Y[,i])^2)}
+mean(EPE_linear)/(2*pi) # This is the estimated E(EPE(X)) under linear model
+Var_linear <- sum((mean(predict_linear) - predict_linear)^2) 
+Var_linear
+Bias_linear <- sum((colMeans(Simu_Y) - mean(predict_linear))^2) 
+sqrt(Bias_linear)
+
+# Fit a quadratic function
+fit_quadra <- lm(Y ~ X + I(X^2))
+predict_quadra <- X_pre^2*fit_quadra$coefficients[3] + X_pre*fit_quadra$coefficients[2] + fit_quadra$coefficients[1]
+EPE_quadra <- matrix(NA, 1000)
+for(i in 1:1000){EPE_quadra[i] <- mean((predict_quadra[i]-Simu_Y[,i])^2)}
+mean(EPE_quadra)/(2*pi) # This is the estimated E(EPE(X)) under quadratic model
+Var_quadra <- sum((mean(predict_quadra) - predict_quadra)^2)
+Var_quadra
+Bias_quadra <- sum((colMeans(Simu_Y) - mean(predict_quadra))^2)
+sqrt(Bias_quadra)
+
+@
+
+
+\end{document}

@@ -1,0 +1,109 @@
+\documentclass{article}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+\begin{document}
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+opts_chunk$set(fig.path='figure/minimal-', fig.align='center', fig.show='asis')
+options(replace.assign=TRUE,width=72)
+@
+
+\section*{Problem 4}
+<<Problem 4, fig.height=5,fig.width=5.5, warning=FALSE>>=
+library(MASS)
+set.seed(20)
+X <- data.frame(rnorm(100), rnorm(100), rnorm(100), rnorm(100), rnorm(100), rnorm(100), rnorm(100)) 
+prin_X <- prcomp(X)
+screeplot(prin_X, main = "Bad ScreePlot")
+#Comment: This is a bad screeplot since all of the principla components have similar variance. Thus, we can not use some of the principal compents to compress the data through projection.We need to use all of the principal components since each of them contain similar amount of information.
+
+Y <- data.frame(rnorm(100), rnorm(100), rnorm(100), rnorm(100), rnorm(100), rnorm(100), rnorm(100, sd = 10))
+prin_Y <- prcomp(Y)
+screeplot(prin_Y, main = "Good ScreePlot")
+# Comment: This is a good screeplot since the first principal component containa a large amount of information. We can use it to compress data and project point based on first principal component.
+@
+
+\section*{Problem 5}
+<<Problem 5, fig.height=5,fig.width=5.5, warning=FALSE>>=
+set.seed(250)
+simulation <- cbind(matrix(rnorm(1000),nrow = 100), matrix(rnorm(300, sd = 2.5), nrow = 100))
+screeplot(prcomp(simulation), main = "dimension 100 * 13", ylim = c(0,10))
+
+simulation_1 <- cbind(matrix(rnorm(2000),nrow = 100), matrix(rnorm(300, sd = 2.5), nrow = 100))
+screeplot(prcomp(simulation_1), main = "dimension 100 * 23", ylim = c(0,10))
+
+simulation_2 <- cbind(matrix(rnorm(4000),nrow = 100), matrix(rnorm(300, sd = 2.5), nrow = 100))
+screeplot(prcomp(simulation_1), main = "dimension 100 * 43", ylim = c(0,10))
+
+simulation_3 <- cbind(matrix(rnorm(5000),nrow = 100), matrix(rnorm(300, sd = 2.5), nrow = 100))
+screeplot(prcomp(simulation_3), main = "dimension 100 * 53", ylim = c(0,10))
+
+simulation_4 <- cbind(matrix(rnorm(10000),nrow = 100), matrix(rnorm(300, sd= 2.5), nrow = 100))
+screeplot(prcomp(simulation_4), main = "dimension 100 * 103", ylim = c(0,10))
+
+simulation_5 <- cbind(matrix(rnorm(20000),nrow = 100), matrix(rnorm(300, sd= 2.5), nrow = 100))
+screeplot(prcomp(simulation_5), main = "dimension 100 * 203", ylim = c(0,10))
+
+@
+Comment: The matrix is constructed so that there are three columns with obvious variability and the other columns have less variability. So we will expect to have three principal components contributing more variability. However, as we increase the number of columns with less varied data, it turns out that the screeplot will explain less variability, which means that increasing dimension would make the variability more ambient data less interpretable using PCA.
+
+\section*{Problem 6}
+<<Problem 6, fig.height=3.5,fig.width=5, warning=FALSE>>=
+set.seed(100)
+A <- matrix(0, nrow = 20, ncol = 20)
+eigenvalue <- c(4,4,4,4,rep(1.025,16))
+diag(A) <- eigenvalue
+# Now we need to construct an orthogonal matrix, I did this by doing svd decomposition to a 8x8 random matrix a extract the U matrix.
+f <- function(){
+  U <- svd(matrix(rnorm(400),20))$u
+  # Then I can construct a Z matrix
+  Z <- U%*%A%*%t(U)
+  prin_Z <- prcomp(Z)
+  explain_var_Z <- sapply(1:20, function(i) sum(prin_Z$sdev[1:i]^2)/sum(prin_Z$sdev    
+  ^2))
+  return(head(explain_var_Z, 4))
+}
+Rep <- replicate(2000, f())
+rowMeans(Rep)
+hist(Rep[1,],breaks = seq(0.2, 0.24, by = 0.0005) ,main = "Percent of Explained Variance of the First PC", xlab = "PC_1")
+hist(Rep[4,], breaks = seq(0.765, 0.81, by = 0.0005), main = "Percent of Explained Variance of the First Four PCs", xlab = "First 4 PCs")
+@
+Comment: I did this problem by constructing a diagnal matrix A with first four diagnal elements as 2 and the rest are smaller, then pretend it is the eigen matrix of some decomposed matrix using svd. Then, I construct the "original" matrix by multiplying orthogonal matrix to A. The method is the same as doing SVD decomposition backwards. Then, I replicate the function 2000 times to get the average of the explanation first four PCs. By the output, we have four three eigen vector explaining raughly 20 percent variability each, and the rest explain 20 percent variability.\\
+        In terms of stability; by first histogram, it seems that the the first principal component tends to explain more than 20 percent of variance(heavy righ tail) although it should explain exactly the same amount of variance as the other three by construction; however, the total variance explained by the top four PCs will not exceed 80 percent but it tends to explain less than 80 percent(heavy left tail in the histogram).
+
+\section*{Problem 7}
+<<Problem 7, fig.height=5,fig.width=5.5, warning=FALSE>>=
+# For N(0,1) distribution
+iqr <- qnorm(0.75) - qnorm(0.25)
+# For N(miu, sd) distribution, IQR = sd*(qnorm(0.75) - qnorm(0.25)), I use the following code to verify. 
+mu <- 10; sigma <- 5
+iqr_new <- qnorm(0.75, mean = mu, sd = sigma) - qnorm(0.25, mean = 10, sd = sigma)
+all.equal(iqr_new, sigma*iqr)
+# For N(0,1)
+fraction_outlier <- 1 - pnorm(qnorm(0.75) + 1.5*iqr) + pnorm(qnorm(0.25) - 1.5*iqr)
+@
+\subsection*{(1)}
+For\emph{N}(0,1) distribution, the \emph{IQR} of is \Sexpr{iqr} \\
+\subsection*{(2)}
+For \emph{N}($\mu$,$\sigma^2$) distribution, the \emph{IQR} is going to be $\sigma$*($Q_{3}$-$Q_{1}$). In order to check it, we have use \emph{N}(10,5) to verify. It turns out its \emph{IQR} is \Sexpr{iqr_new}, which is the raughly the same as \Sexpr{sigma} *  \Sexpr{iqr}\\
+\subsection*{(3)}
+The fraction of outlier for \emph{N}(0,1) is roughly \Sexpr{fraction_outlier}
+\begin{quote}
+\textbf{The rest of problem is attached as a hand written page}
+\end{quote}
+
+
+\end{document}

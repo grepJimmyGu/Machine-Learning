@@ -1,0 +1,321 @@
+\documentclass{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+
+
+\title{Stat 154 Problem Set One}
+
+
+\author{Jinze Gu SID:24968967}
+
+
+\maketitle
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# Problem One Data Cleaning:}
+\hlkwd{setwd}\hlstd{(}\hlstr{"/Volumes/有能出没/Stat 154/Stat 154"}\hlstd{)}
+\hlstd{meta} \hlkwb{<-} \hlkwd{read.csv}\hlstd{(}\hlstr{"stock.csv"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: 无法打开文件'stock.csv': No such file or directory}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 无法打开链结}}\begin{alltt}
+\hlcom{# To calculate daily returns, I only need price, so I extract the data}
+\hlcom{# with price, date and company name.}
+\hlstd{stock} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{date} \hlstd{= meta}\hlopt{$}\hlstd{date,} \hlkwc{COMP} \hlstd{= meta}\hlopt{$}\hlstd{COMNAM,} \hlkwc{PRC} \hlstd{= meta}\hlopt{$}\hlstd{PRC)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'meta'}}\begin{alltt}
+\hlcom{# Just remove the raw data since it takes too much memory.}
+\hlkwd{rm}\hlstd{(meta)}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: 找不到对象'meta'}}\begin{alltt}
+\hlkwd{gc}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+##          used (Mb) gc trigger (Mb) max used (Mb)
+## Ncells 262592 14.1     467875 25.0   407500 21.8
+## Vcells 629202  4.9    1031040  7.9   786432  6.0
+\end{verbatim}
+\begin{alltt}
+\hlstd{compname} \hlkwb{<-} \hlkwd{levels}\hlstd{(}\hlkwd{factor}\hlstd{(stock}\hlopt{$}\hlstd{COMP))}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'stock'}}\begin{alltt}
+\hlcom{# f is a function that extract the price of the same company with 1342}
+\hlcom{# price records. It turns out that there are 422 companies with 1342}
+\hlcom{# sotck price records.}
+\hlstd{f} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(stock}\hlopt{$}\hlstd{PRC[stock}\hlopt{$}\hlstd{COMP} \hlopt{==} \hlstd{compname[x]])} \hlopt{==} \hlnum{1342}\hlstd{) \{}
+        \hlkwd{return}\hlstd{(stock}\hlopt{$}\hlstd{PRC[stock}\hlopt{$}\hlstd{COMP} \hlopt{==} \hlstd{compname[x]])}
+    \hlstd{\}}
+\hlstd{\}}
+\hlstd{stock_l} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(compname)), f)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'compname'}}\begin{alltt}
+\hlcom{# g is a function that extract the name of the company with 1342 price}
+\hlcom{# records.}
+\hlstd{g} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+    \hlkwa{if} \hlstd{(}\hlkwd{length}\hlstd{(stock}\hlopt{$}\hlstd{PRC[stock}\hlopt{$}\hlstd{COMP} \hlopt{==} \hlstd{compname[x]])} \hlopt{==} \hlnum{1342}\hlstd{) \{}
+        \hlkwd{return}\hlstd{(compname[x])}
+    \hlstd{\}}
+\hlstd{\}}
+\hlstd{names} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{length}\hlstd{(compname)), g)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'compname'}}\begin{alltt}
+\hlcom{# Now I construct the price_matrix with price record in different date as}
+\hlcom{# row and with different company as column.}
+\hlstd{price_ma} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{unlist}\hlstd{(stock_l),} \hlkwc{nrow} \hlstd{=} \hlnum{1342}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'stock\_l'}}\begin{alltt}
+\hlkwd{colnames}\hlstd{(price_ma)} \hlkwb{<-} \hlkwd{unlist}\hlstd{(names)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 参数不是串列}}\begin{alltt}
+\hlcom{# Problem One 1).  I calculated the daily return matrix based on}
+\hlcom{# price_ma, and I transformed daily return matrix into percentage}
+\hlcom{# representation so that I can avoid numerical issue.}
+\hlstd{daily_return} \hlkwb{<-} \hlstd{(price_ma[}\hlopt{-}\hlnum{1}\hlstd{, ]} \hlopt{-} \hlstd{price_ma[}\hlnum{1}\hlopt{:}\hlnum{1341}\hlstd{, ])}\hlopt{/}\hlstd{price_ma[}\hlnum{1}\hlopt{:}\hlnum{1341}\hlstd{, ]} \hlopt{*}
+    \hlnum{100}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'price\_ma'}}\begin{alltt}
+\hlcom{# The I do PCA to the daily return matrix with scaled value.}
+\hlstd{prin_stock} \hlkwb{<-} \hlkwd{prcomp}\hlstd{(daily_return,} \hlkwc{rtex} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{scale} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'daily\_return'}}\begin{alltt}
+\hlkwd{screeplot}\hlstd{(prin_stock)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlstd{explain_var_stock} \hlkwb{<-} \hlkwd{sapply}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{422}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{i}\hlstd{)} \hlkwd{sum}\hlstd{(prin_stock}\hlopt{$}\hlstd{sdev[}\hlnum{1}\hlopt{:}\hlstd{i]}\hlopt{^}\hlnum{2}\hlstd{)}\hlopt{/}\hlkwd{sum}\hlstd{(prin_stock}\hlopt{$}\hlstd{sdev}\hlopt{^}\hlnum{2}\hlstd{))}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlcom{# I can check the variance contribution of the first several principal}
+\hlcom{# components. Besides, it is reasonable to test how many principal}
+\hlcom{# components we want to leave in order to keep sat 80% of information}
+\hlkwd{head}\hlstd{(explain_var_stock)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'explain\_var\_stock'}}\begin{alltt}
+\hlkwd{sum}\hlstd{(explain_var_stock} \hlopt{<} \hlnum{0.8}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'explain\_var\_stock'}}\begin{alltt}
+\hlcom{# Interpretation of first few principal component loadings:}
+\hlkwd{hist}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{1}\hlstd{],} \hlkwc{main} \hlstd{=} \hlstr{"First Principal Direction"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{max}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{1}\hlstd{])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{min}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{1}\hlstd{])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{hist}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{2}\hlstd{],} \hlkwc{main} \hlstd{=} \hlstr{"Second Principal Direction"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{max}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{2}\hlstd{])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{min}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{2}\hlstd{])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{hist}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{3}\hlstd{],} \hlkwc{main} \hlstd{=} \hlstr{"Third Principal Direction"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{max}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{3}\hlstd{])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{min}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{3}\hlstd{])}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlcom{# Comment: Based on the principal loadings, in the first three principal}
+\hlcom{# component loadings, most of the variables(companies in this case) have}
+\hlcom{# similar variance. It means that each variable are equally important in}
+\hlcom{# accounting for the variability in the PC.}
+\hlcom{# Besides, I plotted the projected data on the first and second principal}
+\hlcom{# component direction. I don't think there is an obvious clustering.}
+\hlkwd{plot}\hlstd{(prin_stock}\hlopt{$}\hlstd{x[,} \hlnum{1}\hlstd{], prin_stock}\hlopt{$}\hlstd{x[,} \hlnum{2}\hlstd{],} \hlkwc{xlab} \hlstd{=} \hlstr{"First Principal Component"}\hlstd{,}
+    \hlkwc{ylab} \hlstd{=} \hlstr{"Second Principal Component"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlcom{# Compar the plot that I only use the projected data in the first and}
+\hlcom{# second PC direction rather than using all of the eigenvectors to}
+\hlcom{# project the data.}
+\hlstd{prin_stock} \hlkwb{<-} \hlkwd{prcomp}\hlstd{(}\hlkwd{t}\hlstd{(daily_return),} \hlkwc{rtex} \hlstd{=} \hlnum{TRUE}\hlstd{,} \hlkwc{scale} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'daily\_return'}}\begin{alltt}
+\hlstd{stock_proj} \hlkwb{<-} \hlkwd{t}\hlstd{(prin_stock}\hlopt{$}\hlstd{rotation[,} \hlnum{1}\hlopt{:}\hlnum{2}\hlstd{])} \hlopt{%*%} \hlkwd{scale}\hlstd{(daily_return)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'prin\_stock'}}\begin{alltt}
+\hlkwd{plot}\hlstd{(}\hlkwd{t}\hlstd{(stock_proj),} \hlkwc{main} \hlstd{=} \hlstr{"Projected data in the first and second PCs"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'stock\_proj'}}\begin{alltt}
+\hlcom{# Comment: I did not see any obviously great clustering.}
+\hlcom{# Problem One 2).  If I use all 422 companies to do hieararchical}
+\hlcom{# clustering, then I have the following graph.}
+\hlstd{dist_stock} \hlkwb{<-} \hlkwd{dist}\hlstd{(}\hlkwd{t}\hlstd{(daily_return),} \hlkwc{method} \hlstd{=} \hlstr{"manhattan"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'daily\_return'}}\begin{alltt}
+\hlstd{hc_stock} \hlkwb{<-} \hlkwd{hclust}\hlstd{(dist_stock,} \hlkwc{method} \hlstd{=} \hlstr{"complete"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'dist\_stock'}}\begin{alltt}
+\hlkwd{plclust}\hlstd{(hc_stock,} \hlkwc{labels} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'hc\_stock'}}\begin{alltt}
+\hlcom{# Comment: I chose manhattan metric since I believe daily return should}
+\hlcom{# be equally weighted for everyday and it is reasonable to calculate the}
+\hlcom{# absolute difference between daily return rather than the euclidean}
+\hlcom{# distance. From the plot, I can see that those companies can be}
+\hlcom{# classified as different groups based on their variance of daily return.}
+\hlcom{# I used only 10 companies which would generate a better plot.}
+\hlstd{sample} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{40}\hlstd{,} \hlnum{60}\hlstd{,} \hlnum{114}\hlstd{,} \hlnum{210}\hlstd{,} \hlnum{275}\hlstd{,} \hlnum{89}\hlstd{,} \hlnum{320}\hlstd{,} \hlnum{170}\hlstd{,} \hlnum{413}\hlstd{)}
+\hlstd{dist_stock_sub} \hlkwb{<-} \hlkwd{dist}\hlstd{(}\hlkwd{t}\hlstd{(daily_return[, sample]),} \hlkwc{method} \hlstd{=} \hlstr{"manhattan"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'daily\_return'}}\begin{alltt}
+\hlstd{hc_stock_sub} \hlkwb{<-} \hlkwd{hclust}\hlstd{(dist_stock_sub,} \hlkwc{method} \hlstd{=} \hlstr{"complete"}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'dist\_stock\_sub'}}\begin{alltt}
+\hlkwd{plclust}\hlstd{(hc_stock_sub,} \hlkwc{labels} \hlstd{=} \hlkwa{NULL}\hlstd{)}
+\end{alltt}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{\#\# Error: 找不到对象'hc\_stock\_sub'}}\begin{alltt}
+
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Problem One 1):
+Interpretation of first few vectors of PC loadings:
+Comment: Based on the principal loadings, in the first three principal component loadings, most of the variables(companies in this case) have similar variance. It means that each variable are equally important in accounting for the variability in the PC.
+
+Problem One 2):
+Comment: I chose manhattan metric to do hclustering since I believe daily return should be equally weighted for everyday and it is reasonable to calculate the absolute difference between daily return rather than the euclidean distance. From the plot, I can see that those companies can be classified as different groups based on their variance of daily return.
+
+
+
+\end{document}

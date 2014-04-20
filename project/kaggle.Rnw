@@ -1,0 +1,252 @@
+\documentclass{article}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+\usepackage{breakurl}
+\begin{document}
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+opts_chunk$set(fig.path='figure/minimal-', fig.show='asis')
+options(replace.assign=TRUE,width=90)
+@
+
+
+\title{Stat 154 Kaggle Project}
+
+
+\author{}
+
+
+\maketitle
+<<Lasso with RF 4/16/15:40>>=
+library(glmnet)
+library(randomForest)
+setwd("/Volumes/有能出没/Stat 154/project")
+train <- read.csv("train.csv", header = FALSE)
+test <- as.matrix(read.csv("test.csv", header = FALSE))
+dim(train)
+colnames(test) <- NULL
+X <- as.matrix(train[,2:513])
+colnames(X) <- NULL
+Y <- train[,1]
+train.cv <- cv.glmnet(X, Y, family = "multinomial", type.measure = "class", nfolds = 10, grouped = FALSE)
+# train.model <- glmnet(X, Y, family = "multinomial", alpha = 1)
+coef.cv <- coef(train.cv, s = train.cv$lambda.min)
+
+newX <- train[,which(coef.cv[[1]]!=0)]
+newX <- newX[,-1]
+opt_mtry <- tuneRF(newX, as.factor(Y), ntreeTry = 2000, nodesize = 1)
+RF <- randomForest(newX, as.factor(Y), mtry = 6, ntree = 2000, importance = TRUE, proximity=TRUE)
+pred.RF.lasso <- predict(RF, newdata = newX, type = "class")
+sum(pred.RF.lasso != as.factor(Y))
+
+## Test
+index <- which(coef.cv[[1]] != 0)[-1]-1
+newTest <- test[,index]
+test.pred <- as.numeric(predict(RF, newdata = newTest, type = "class"))
+test_4_13 <- read.csv("submission4_13_revise.csv")
+sum(test.pred != test_4_13[,2])
+submissions = cbind((1:nrow(test)), test.pred)
+write.table(submissions, file = "submission4_13_revise.csv", sep = ",", col.names = c("Id", "Predictions"), row.names = F) #I had some trouble getting write.csv to output the submissions in the correct format for kaggle, so I just used write.table and specified a comma as separator.
+best <- read.csv("yujie.csv")
+sum(test.pred == best[,2])
+
+@
+
+<<dataset>>=
+set.seed(100)
+train <- as.matrix(train)
+getdata <- function(train, k){
+  ran <- sample(100,k)
+  non_ran <- c(1:100)[-ran]
+  test.tr <- matrix(NA, nrow = (100-k)*8, ncol = 513)
+  train.tr <- matrix(NA, nrow = k*8, ncol = 513)
+  for(i in 1:8){
+    train.s <- (i-1)*k+1; train.e <- i*k
+    test.s <- (i-1)*(100-k)+1; test.e <- i*(100-k)
+    add <- (i-1)*100
+    train.tr[train.s:train.e,] <- train[ran+add,]
+    test.tr[test.s:test.e,] <- train[non_ran+add,]
+  }
+  return(list("train" = train.tr, "test" = test.tr))
+}
+
+data <- getdata(train, 32)
+train.tr <- data$train
+test.tr <- data$test
+
+# Lasso With RF (wrong)
+Lasso.RF <- cv.glmnet(x = as.matrix(train.tr[,2:513]), y = train.tr[,1], family = "multinomial", alpha = 1, nfolds = 10, type.measure="class")
+opt_lambda <- Lasso.RF$lambda.min
+plot(Lasso.RF)
+my.logistic <- glmnet(x = as.matrix(train.tr[,2:513]), y = train.tr[,1], family = "multinomial", alpha = 1, lambda = opt_lambda)
+# Select out the coefficients
+coef <- predict(Lasso.RF, type = "coefficients")
+newX <- train.tr[, which(coef[[1]] != 0)]
+RF <- randomForest(x = newX, y = as.factor(train.tr[,1]), ntree = 2000)
+length(which(predict(RF, newdata = newX)!=as.factor(train.tr[,1])))
+
+testX <- test.tr[, which(coef[[1]] != 0)]
+length(which(predict(RF, newdata = testX)!=as.factor(test.tr[,1])))
+
+############################################################################
+# 4/14/17:10 Submission using predictors from Lasso With RF
+select.X <- train[, which(coef[[1]] != 0)]
+Lasso.RF <- randomForest(x = select.X, y = as.factor(train[,1]), ntree = 2000)
+
+# Training Error using all of the traing set
+length(which(predict(Lasso.RF, newdata = select.X)!=as.factor(train[,1])))
+
+# Test
+select.Test.X <- test[, which(coef[[1]] != 0)]
+new_pred <- predict(Lasso.RF, newdata = select.Test.X)
+
+# Submission
+submissions = cbind((1:nrow(test)), new_pred)
+write.table(submissions, file = "submission4_14_17_10.csv", sep = ",", col.names = c("Id", "Predictions"), row.names = F)
+
+############################################################################
+# Random Forest
+bestmtry<-tuneRF(x = train.tr[,2:513], y = as.factor(train.tr[,1]), ntree = 2000, nodesize = 1)
+bestmtry
+RF.normal <- randomForest(x = train.tr[,2:513], y = as.factor(train.tr[,1]), ntree = 2000, mtry = 22)
+length(which(predict(RF.normal, newdata = train.tr[,2:513])!=as.factor(train.tr[,1])))
+length(which(predict(RF.normal, newdata = test.tr[,2:513])!=as.factor(test.tr[,1])))
+test.tr[which(predict(RF.normal, newdata = test.tr[,2:513])!=as.factor(test.tr[,1])),1]
+
+
+@
+
+<<4/16/9:08>>=
+# This is just disaster, QDA, LDA
+library(MASS)
+train.cv <- cv.glmnet(as.matrix(train[,-1]), as.factor(train[,1]), family = "multinomial", type = "class", nfolds = 10, grouped = FALSE)
+train.cv$lambda.min
+sparse_coef <- predict(train.cv, s = train.cv$lambda.min, type = "coefficients")
+predict_lasso <- as.factor(predict(train.cv, newx = as.matrix(train[,-1]), s = train.cv$lambda.min, type = "class"))
+sum(predict_lasso != as.factor(Y))
+sparse_X_new <- as.matrix(train[,which(sparse_coef[[1]]!= 0)])
+LDA <- lda(sparse_X, grouping = as.factor(Y), CV= TRUE)
+predict.lda <- predict(LDA, newdata = as.matrix(test))
+
+@
+
+<<4/16/11:46>>=
+# Spline of logistic
+library(splines)
+sparse_X_new <- train[,which(coef.cv[[1]]!=0)]
+sparse_X_new <- sparse_X_new[,-1]
+spline_X <- matrix(NA, nrow = nrow(sparse_X_new), ncol = ncol(sparse_X_new)*4)
+for(i in 1:ncol(sparse_X_new)){
+   start <- (i-1)*4 + 1
+   end <- i*4
+   spline_X[,start:end] <- ns(sparse_X_new[,i], df = 4, intercept = TRUE)
+}
+spl.logit <- cv.glmnet(spline_X, Y, family = "multinomial", type = "class", nfolds=5, alpha = 0)
+plot(spl.logit)
+predict.tr <- predict(spl.logit, newx = spline_X, s = spl.logit$lambda.min, type = "class")
+sum(as.factor(predict.tr)!= as.factor(Y))
+
+# Construct the spline_test_X
+spline_test_X <- matrix(NA, nrow = nrow(test), ncol = ncol(sparse_X_new)*4)
+index <- which(coef.cv[[1]]!= 0)[-1]-1
+test_X <- test[,index]
+for(i in 1:ncol(sparse_X_new)){
+   start <- (i-1)*4 + 1
+   end <- i*4
+   spline_test_X[,start:end] <- ns(test_X[,i], df = 4, intercept = TRUE)
+}
+predict.test <- predict(spl.logit, newx = spline_test_X, s = spl.logit$lambda.min, type = "class")
+predict.test <- as.numeric(predict.test)
+sum(predict.test != best[,2])/1888
+
+# Submission
+submissions = cbind((1:length(predict.test)), predict.test)
+write.table(submissions, file = "submission4_16_2.csv", sep = ",", col.names = c("Id", "Predictions"), row.names = F)
+sub_4_16 <- read.csv("submission4_16_2.csv", header = TRUE)
+sum(sub_4_16[,2]!=predict.test)/1888
+
+@
+
+<<RF_4_17>>=
+library(glmnet)
+library(randomForest)
+setwd("/Volumes/有能出没/Stat 154/project")
+train <- as.matrix(read.csv("train.csv", header = FALSE))
+colnames(train) <- NULL
+test <- as.matrix(read.csv("test.csv", header = FALSE))
+colnames(test) <- NULL
+
+logistic <- cv.glmnet(x=train[,-1], y=train[,1], family="multinomial", type.measure="class", nfolds = 10, grouped=FALSE)
+lambda = logistic$lambda.min
+logistic.fit = glmnet(train[,-1], train[,1], family="multinomial", alpha = 0.1)
+beta.logistic = coef(logistic.fit, newx = train[,-1], s=lambda)
+Index <- list()
+for(i in 1:8){
+  Index[[i]] <- which(beta.logistic[[i]]!=0)[-1]-1
+}
+
+# Create the new Y which used for RF_one_other
+Y_new <- matrix(0, nrow = 800, ncol = 8)
+for(i in 1:8){
+  Y_new[which(train[,1] == i),i] <- 1 
+}
+X <- train[,-1]
+RF_one_other <- function(Y_new){
+  train.error <- vector("numeric", 8)
+  test.pred <- matrix(0, nrow = 1888, ncol = 8)
+  test.vote <- matrix(0, nrow = 1888, ncol = 8)
+  for(i in 1:8){
+    rf.fit <- randomForest(X[,Index[[i]]], as.factor(Y_new[,i]), proximity=TRUE, importance=TRUE, ntree = 1000)
+    predict.tr <- predict(rf.fit, newdata = X[,Index[[i]]])
+    train.error[i] <- sum(predict.tr != Y_new[,i])
+    test.pred[,i] <- as.numeric(predict(rf.fit, newdata = test[,Index[[i]]])) - 1
+    test.vote[,i] <- predict(rf.fit, newdata = test[,Index[[i]]], type = "vote")[,2]
+  }
+  return(list("train.error" = train.error, "pred" = test.pred, "vote" = test.vote))
+}
+RF_haha <- RF_one_other(Y_new)
+RF_haha$train.error
+dim(RF_haha$pred)
+Votes <- RF_haha$vote
+# The conflict index 
+conf_index <- which(rowSums(RF_haha$pred) > 1)
+# Non determined index
+non_deter <- which(rowSums(RF_haha$pred) == 0)
+final_predict <- matrix(NA, nrow = 1888)
+for(i in 1:8){
+  final_predict[which(RF_haha$pred[,i] == 1)] <- i
+}
+# Then decide non_determined rows by selecting the class with greatest vote
+for(i in 1:length(non_deter)){
+  final_predict[non_deter[i]] <- which.max(Votes[non_deter[i],])
+}
+# Then I need to deal with the image with more than one predictions
+for(i in 1:length(conf_index)){
+  final_predict[conf_index[i]] <- which.max(Votes[conf_index[i],])
+}
+best <- read.csv("yujie.csv")
+sum(final_predict != best[,2])
+
+# Submission
+submissions = cbind((1:length(final_predict)), final_predict)
+write.table(submissions, file = "submission4_17_RF_2.csv", sep = ",", col.names = c("Id", "Predictions"), row.names = F)
+check <- read.csv("submission4_17_RF_2.csv")
+sum(check[,2] != final_predict)
+diff <- table(best[which(final_predict != best[,2]),2]) - table(final_predict[which(final_predict != best[,2])])
+abs(diff)
+@
+
+
+\end{document}
